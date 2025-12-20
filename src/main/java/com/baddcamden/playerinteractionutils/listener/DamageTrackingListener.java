@@ -40,6 +40,10 @@ public class DamageTrackingListener implements Listener {
             return;
         }
 
+        if (!settings.entityWhitelist().isAllowed(victim)) {
+            return;
+        }
+
         boolean countersEnabled = settings.playerCounters();
         if (settings.damageTracking()) {
             Instant now = Instant.now();

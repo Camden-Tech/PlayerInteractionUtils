@@ -9,6 +9,10 @@ features:
   player-counters: true
 
 whitelists:
+  # Only entities or tags listed here will be tagged with NBT metadata.
+  # Accepts vanilla or namespaced entity ids (e.g. `minecraft:cow`, `zombie`)
+  # and entity tag keys prefixed with `#` (e.g. `#minecraft:animals`).
+  # Leave empty to allow all entities to be tagged.
   entity-tags: []
 
 # Future: whitelist of NBT tags per entity could be added under `whitelists`.

@@ -2,6 +2,7 @@ package com.baddcamden.playerinteractionutils;
 
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.EntityType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,6 +27,7 @@ class ConfigSettingsTest {
         assertTrue(settings.damageTracking());
         assertTrue(settings.playerCounters());
         assertEquals(List.of(), settings.entityTagWhitelist());
+        assertTrue(settings.entityWhitelist().isAllowed(EntityType.COW));
     }
 
     @Test
