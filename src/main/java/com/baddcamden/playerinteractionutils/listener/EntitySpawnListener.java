@@ -2,6 +2,7 @@ package com.baddcamden.playerinteractionutils.listener;
 
 import com.baddcamden.playerinteractionutils.ConfigSettings;
 import com.baddcamden.playerinteractionutils.DataKeys;
+import com.baddcamden.playerinteractionutils.NonPlayerEntityDataManager;
 import com.baddcamden.playerinteractionutils.PlayerData;
 import com.baddcamden.playerinteractionutils.PlayerDataManager;
 import com.baddcamden.playerinteractionutils.SpawnContextTracker;
@@ -21,14 +22,18 @@ import java.util.UUID;
 public class EntitySpawnListener implements Listener {
     private final ConfigSettings settings;
     private final DataKeys dataKeys;
+    private final NonPlayerEntityDataManager entityDataManager;
     private final PlayerDataManager playerDataManager;
     private final SpawnContextTracker spawnContextTracker;
+    private final boolean entityPdcEnabled;
 
-    public EntitySpawnListener(ConfigSettings settings, DataKeys dataKeys, PlayerDataManager playerDataManager, SpawnContextTracker spawnContextTracker) {
+    public EntitySpawnListener(ConfigSettings settings, DataKeys dataKeys, PlayerDataManager playerDataManager, SpawnContextTracker spawnContextTracker, NonPlayerEntityDataManager entityDataManager) {
         this.settings = settings;
         this.dataKeys = dataKeys;
         this.playerDataManager = playerDataManager;
         this.spawnContextTracker = spawnContextTracker;
+        this.entityDataManager = entityDataManager;
+        this.entityPdcEnabled = settings.entityPdcEnabled();
     }
 
     @EventHandler
@@ -62,10 +67,14 @@ public class EntitySpawnListener implements Listener {
         if (!settings.entityWhitelist().isAllowed(entity)) {
             return;
         }
-        PersistentDataContainer pdc = entity.getPersistentDataContainer();
-        NamespacedKey spawnKey = spawnKeyForReason(event.getSpawnReason());
-        if (spawnKey != null) {
-            pdc.set(spawnKey, PersistentDataType.STRING, playerId.get().toString());
+        if (entityPdcEnabled) {
+            PersistentDataContainer pdc = entity.getPersistentDataContainer();
+            NamespacedKey spawnKey = spawnKeyForReason(event.getSpawnReason());
+            if (spawnKey != null) {
+                pdc.set(spawnKey, PersistentDataType.STRING, playerId.get().toString());
+            }
+        } else {
+            entityDataManager.get(entity.getUniqueId()).setSpawnOwner(event.getSpawnReason(), playerId.get());
         }
 
         if (!settings.playerCounters()) {

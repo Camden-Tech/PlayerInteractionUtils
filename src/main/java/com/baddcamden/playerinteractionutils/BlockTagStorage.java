@@ -1,5 +1,6 @@
 package com.baddcamden.playerinteractionutils;
 
+import com.baddcamden.playerinteractionutils.BlockDataManager;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
@@ -11,17 +12,28 @@ import java.util.UUID;
 
 public class BlockTagStorage {
     private final DataKeys keys;
+    private final boolean chunkPdcEnabled;
+    private final BlockDataManager blockDataManager;
 
-    public BlockTagStorage(DataKeys keys) {
+    public BlockTagStorage(DataKeys keys, boolean chunkPdcEnabled, BlockDataManager blockDataManager) {
         this.keys = keys;
+        this.chunkPdcEnabled = chunkPdcEnabled;
+        this.blockDataManager = blockDataManager;
     }
 
     public void setOwner(Block block, UUID ownerId) {
-        setBlockValue(block, keys.blockOwner, ownerId.toString());
+        if (chunkPdcEnabled) {
+            setBlockValue(block, keys.blockOwner, ownerId.toString());
+        } else if (blockDataManager != null) {
+            blockDataManager.get(block).setOwner(ownerId);
+        }
     }
 
     public Optional<UUID> getOwner(Block block) {
-        return getBlockValue(block, keys.blockOwner).map(UUID::fromString);
+        if (chunkPdcEnabled) {
+            return getBlockValue(block, keys.blockOwner).map(UUID::fromString);
+        }
+        return blockDataManager != null ? blockDataManager.get(block).ownerId() : Optional.empty();
     }
 
     /**
@@ -29,7 +41,11 @@ public class BlockTagStorage {
      * The stored value reflects the original owner, not necessarily the actor that caused the growth.
      */
     public void setGrownFromPlayer(Block block, UUID ownerId) {
-        setBlockValue(block, keys.blockGrownFromPlayer, ownerId.toString());
+        if (chunkPdcEnabled) {
+            setBlockValue(block, keys.blockGrownFromPlayer, ownerId.toString());
+        } else if (blockDataManager != null) {
+            blockDataManager.get(block).setGrownFromPlayerId(ownerId);
+        }
     }
 
     /**
@@ -37,7 +53,11 @@ public class BlockTagStorage {
      * The stored value reflects the original owner, not necessarily the actor that triggered the change.
      */
     public void setTransformedFromPlayer(Block block, UUID ownerId) {
-        setBlockValue(block, keys.blockTransformedFromPlayer, ownerId.toString());
+        if (chunkPdcEnabled) {
+            setBlockValue(block, keys.blockTransformedFromPlayer, ownerId.toString());
+        } else if (blockDataManager != null) {
+            blockDataManager.get(block).setTransformedFromPlayerId(ownerId);
+        }
     }
 
     private void setBlockValue(Block block, org.bukkit.NamespacedKey key, String value) {

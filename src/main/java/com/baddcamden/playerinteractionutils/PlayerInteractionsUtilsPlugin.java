@@ -3,6 +3,8 @@ package com.baddcamden.playerinteractionutils;
 import com.baddcamden.playerinteractionutils.listener.BlockTagListener;
 import com.baddcamden.playerinteractionutils.listener.DamageTrackingListener;
 import com.baddcamden.playerinteractionutils.listener.EntitySpawnListener;
+import com.baddcamden.playerinteractionutils.listener.ChunkLifecycleListener;
+import com.baddcamden.playerinteractionutils.listener.NonPlayerEntityLifecycleListener;
 import com.baddcamden.playerinteractionutils.listener.PlayerLifecycleListener;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -13,6 +15,8 @@ import java.util.stream.Collectors;
 public class PlayerInteractionsUtilsPlugin extends JavaPlugin {
     private ConfigSettings settings;
     private PlayerDataManager playerDataManager;
+    private NonPlayerEntityDataManager entityDataManager;
+    private BlockDataManager blockDataManager;
     private DataKeys dataKeys;
     private SpawnContextTracker spawnContextTracker;
     private BlockTagStorage blockTagStorage;
@@ -23,8 +27,10 @@ public class PlayerInteractionsUtilsPlugin extends JavaPlugin {
         reloadConfiguration();
         dataKeys = new DataKeys(this);
         playerDataManager = new PlayerDataManager(getDataFolder(), getLogger());
+        entityDataManager = new NonPlayerEntityDataManager(getDataFolder(), getLogger());
+        blockDataManager = new BlockDataManager(getDataFolder(), getLogger());
         spawnContextTracker = new SpawnContextTracker();
-        blockTagStorage = new BlockTagStorage(dataKeys);
+        blockTagStorage = new BlockTagStorage(dataKeys, settings.chunkPdcEnabled(), blockDataManager);
 
         registerListeners();
 
@@ -35,14 +41,22 @@ public class PlayerInteractionsUtilsPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         Bukkit.getOnlinePlayers().forEach(player -> playerDataManager.save(player.getUniqueId()));
+        if (!settings.entityPdcEnabled()) {
+            entityDataManager.saveAllTracked();
+        }
+        if (!settings.chunkPdcEnabled()) {
+            blockDataManager.saveAllTracked();
+        }
     }
 
     private void registerListeners() {
         var pluginManager = getServer().getPluginManager();
         pluginManager.registerEvents(new PlayerLifecycleListener(playerDataManager), this);
-        pluginManager.registerEvents(new BlockTagListener(settings, blockTagStorage, playerDataManager), this);
-        pluginManager.registerEvents(new EntitySpawnListener(settings, dataKeys, playerDataManager, spawnContextTracker), this);
-        pluginManager.registerEvents(new DamageTrackingListener(settings, dataKeys, playerDataManager), this);
+        pluginManager.registerEvents(new BlockTagListener(settings, blockTagStorage, playerDataManager, blockDataManager), this);
+        pluginManager.registerEvents(new EntitySpawnListener(settings, dataKeys, playerDataManager, spawnContextTracker, entityDataManager), this);
+        pluginManager.registerEvents(new DamageTrackingListener(settings, dataKeys, playerDataManager, entityDataManager), this);
+        pluginManager.registerEvents(new NonPlayerEntityLifecycleListener(entityDataManager, settings.entityPdcEnabled()), this);
+        pluginManager.registerEvents(new ChunkLifecycleListener(blockDataManager, settings.chunkPdcEnabled()), this);
     }
 
     public void reloadConfiguration() {

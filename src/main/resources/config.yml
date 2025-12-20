@@ -8,6 +8,16 @@ features:
   damage-tracking: true
   player-counters: true
 
+storage:
+  # When true, non-player block metadata is written to chunk PersistentDataContainers.
+  # Set to false if your platform does not persist chunk PDC values; data will be written to plugins/PlayerInteractionsUtils/blocks/
+  # on chunk unload and server shutdown instead.
+  chunk-pdc-enabled: true
+  # When true, non-player entity metadata (spawn owner, damage tallies) is written to the entity PDC.
+  # Set to false if your platform does not persist non-player PDC; data will be written to plugins/PlayerInteractionsUtils/entities/
+  # when entities leave memory (chunk unload, death) or on shutdown.
+  entity-pdc-enabled: true
+
 whitelists:
   # Only entities or tags listed here will be tagged with NBT metadata.
   # Accepts vanilla or namespaced entity ids (e.g. `minecraft:cow`, `zombie`)
