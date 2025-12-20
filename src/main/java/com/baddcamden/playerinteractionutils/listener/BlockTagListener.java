@@ -43,8 +43,14 @@ public class BlockTagListener implements Listener {
         if (!settings.blockGrowthTagging()) {
             return;
         }
-        blockTags.getOwner(event.getBlock()).ifPresent(ownerId ->
-                event.getBlocks().forEach(state -> tagGrowth(state.getBlock(), ownerId)));
+        blockTags.getOwner(event.getBlock()).ifPresent(ownerId -> {
+            event.getBlocks().forEach(state -> {
+                tagGrowth(state.getBlock(), ownerId);
+                if (settings.playerCounters()) {
+                    playerDataManager.get(ownerId).increment(PlayerData.CounterType.BLOCK_GROWTH_TAGS);
+                }
+            });
+        });
     }
 
     @EventHandler
@@ -52,8 +58,14 @@ public class BlockTagListener implements Listener {
         if (!settings.blockGrowthTagging()) {
             return;
         }
-        blockTags.getOwner(event.getLocation().getBlock()).ifPresent(ownerId ->
-                event.getBlocks().forEach(state -> tagGrowth(state.getBlock(), ownerId)));
+        blockTags.getOwner(event.getLocation().getBlock()).ifPresent(ownerId -> {
+            event.getBlocks().forEach(state -> {
+                tagGrowth(state.getBlock(), ownerId);
+                if (settings.playerCounters()) {
+                    playerDataManager.get(ownerId).increment(PlayerData.CounterType.BLOCK_GROWTH_TAGS);
+                }
+            });
+        });
     }
 
     @EventHandler
@@ -62,8 +74,12 @@ public class BlockTagListener implements Listener {
             return;
         }
         // Only tag transformations when the original block was owned, keeping the ownership chain intact.
-        blockTags.getOwner(event.getBlock()).ifPresent(ownerId ->
-                blockTags.setTransformedFromPlayer(event.getBlock(), ownerId));
+        blockTags.getOwner(event.getBlock()).ifPresent(ownerId -> {
+            blockTags.setTransformedFromPlayer(event.getBlock(), ownerId);
+            if (settings.playerCounters()) {
+                playerDataManager.get(ownerId).increment(PlayerData.CounterType.BLOCK_TRANSFORM_TAGS);
+            }
+        });
     }
 
     /**
