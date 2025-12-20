@@ -13,6 +13,8 @@ import org.bukkit.event.block.StructureGrowEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.entity.Player;
 
+import java.util.UUID;
+
 public class BlockTagListener implements Listener {
     private final ConfigSettings settings;
     private final BlockTagStorage blockTags;
@@ -41,11 +43,8 @@ public class BlockTagListener implements Listener {
         if (!settings.blockGrowthTagging()) {
             return;
         }
-        Player player = event.getPlayer();
-        if (player == null) {
-            return;
-        }
-        event.getBlocks().forEach(state -> tagGrowth(state.getBlock(), player));
+        blockTags.getOwner(event.getBlock()).ifPresent(ownerId ->
+                event.getBlocks().forEach(state -> tagGrowth(state.getBlock(), ownerId)));
     }
 
     @EventHandler
@@ -53,11 +52,8 @@ public class BlockTagListener implements Listener {
         if (!settings.blockGrowthTagging()) {
             return;
         }
-        Player player = event.getPlayer();
-        if (player == null) {
-            return;
-        }
-        event.getBlocks().forEach(state -> tagGrowth(state.getBlock(), player));
+        blockTags.getOwner(event.getLocation().getBlock()).ifPresent(ownerId ->
+                event.getBlocks().forEach(state -> tagGrowth(state.getBlock(), ownerId)));
     }
 
     @EventHandler
@@ -65,13 +61,16 @@ public class BlockTagListener implements Listener {
         if (!settings.blockTransformTagging()) {
             return;
         }
-        if (!(event.getEntity() instanceof Player player)) {
-            return;
-        }
-        blockTags.setTransformedBy(event.getBlock(), player.getUniqueId());
+        // Only tag transformations when the original block was owned, keeping the ownership chain intact.
+        blockTags.getOwner(event.getBlock()).ifPresent(ownerId ->
+                blockTags.setTransformedFromPlayer(event.getBlock(), ownerId));
     }
 
-    private void tagGrowth(Block block, Player player) {
-        blockTags.setGrownBy(block, player.getUniqueId());
+    /**
+     * Apply a growth tag that records the owner of the source block that produced the new block state.
+     * The owner tracked here is the placer of the originating block, not the actor causing the growth.
+     */
+    private void tagGrowth(Block block, UUID ownerId) {
+        blockTags.setGrownFromPlayer(block, ownerId);
     }
 }
