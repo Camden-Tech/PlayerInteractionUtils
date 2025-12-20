@@ -20,6 +20,10 @@ class PlayerDataManagerTest {
 
         PlayerData data = manager.get(playerId);
         data.increment(PlayerData.CounterType.BLOCKS_PLACED);
+        data.increment(PlayerData.CounterType.BLOCK_GROWTH_TAGS);
+        data.increment(PlayerData.CounterType.BLOCK_TRANSFORM_TAGS);
+        data.increment(PlayerData.CounterType.LAST_HIT_UPDATES);
+        data.increment(PlayerData.CounterType.DAMAGE_RECORDS);
         data.addDamage(5.5);
         manager.save(playerId);
 
@@ -29,6 +33,10 @@ class PlayerDataManagerTest {
 
         assertNotNull(loaded);
         assertEquals(1L, loaded.counters().get(PlayerData.CounterType.BLOCKS_PLACED));
+        assertEquals(1L, loaded.counters().get(PlayerData.CounterType.BLOCK_GROWTH_TAGS));
+        assertEquals(1L, loaded.counters().get(PlayerData.CounterType.BLOCK_TRANSFORM_TAGS));
+        assertEquals(1L, loaded.counters().get(PlayerData.CounterType.LAST_HIT_UPDATES));
+        assertEquals(1L, loaded.counters().get(PlayerData.CounterType.DAMAGE_RECORDS));
         assertEquals(5.5, loaded.damageToNonPlayers());
     }
 }

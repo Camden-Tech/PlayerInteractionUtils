@@ -1,9 +1,13 @@
 package com.baddcamden.playerinteractionutils;
 
 import org.bukkit.configuration.MemoryConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,5 +48,22 @@ class ConfigSettingsTest {
         assertEquals(false, settings.damageTracking());
         assertEquals(false, settings.playerCounters());
         assertEquals(List.of("zombie", "cow"), settings.entityTagWhitelist());
+    }
+
+    @Test
+    void defaultsNewCountersWhenMissing(@TempDir File tempDir) throws Exception {
+        UUID playerId = UUID.randomUUID();
+        File file = new File(tempDir, playerId.toString() + ".yml");
+        YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set("counters.blocks_placed", 2L);
+        configuration.save(file);
+
+        PlayerData loaded = PlayerData.load(playerId, file);
+
+        assertEquals(2L, loaded.counters().get(PlayerData.CounterType.BLOCKS_PLACED));
+        assertEquals(0L, loaded.counters().get(PlayerData.CounterType.BLOCK_GROWTH_TAGS));
+        assertEquals(0L, loaded.counters().get(PlayerData.CounterType.BLOCK_TRANSFORM_TAGS));
+        assertEquals(0L, loaded.counters().get(PlayerData.CounterType.LAST_HIT_UPDATES));
+        assertEquals(0L, loaded.counters().get(PlayerData.CounterType.DAMAGE_RECORDS));
     }
 }

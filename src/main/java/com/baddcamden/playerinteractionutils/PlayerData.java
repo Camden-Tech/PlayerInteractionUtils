@@ -15,7 +15,11 @@ public class PlayerData {
         BLOCKS_PLACED,
         EGG_SPAWNS,
         SPAWN_EGG_SPAWNS,
-        BREEDING_SPAWNS
+        BREEDING_SPAWNS,
+        BLOCK_GROWTH_TAGS,
+        BLOCK_TRANSFORM_TAGS,
+        LAST_HIT_UPDATES,
+        DAMAGE_RECORDS
     }
 
     private final UUID playerId;
