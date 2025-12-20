@@ -1,6 +1,7 @@
 package com.baddcamden.playerinteractionutils.listener;
 
 import com.baddcamden.playerinteractionutils.BlockTagStorage;
+import com.baddcamden.playerinteractionutils.BlockDataManager;
 import com.baddcamden.playerinteractionutils.ConfigSettings;
 import com.baddcamden.playerinteractionutils.PlayerData;
 import com.baddcamden.playerinteractionutils.PlayerDataManager;
@@ -19,11 +20,13 @@ public class BlockTagListener implements Listener {
     private final ConfigSettings settings;
     private final BlockTagStorage blockTags;
     private final PlayerDataManager playerDataManager;
+    private final BlockDataManager blockDataManager;
 
-    public BlockTagListener(ConfigSettings settings, BlockTagStorage blockTags, PlayerDataManager playerDataManager) {
+    public BlockTagListener(ConfigSettings settings, BlockTagStorage blockTags, PlayerDataManager playerDataManager, BlockDataManager blockDataManager) {
         this.settings = settings;
         this.blockTags = blockTags;
         this.playerDataManager = playerDataManager;
+        this.blockDataManager = blockDataManager;
     }
 
     @EventHandler
@@ -88,5 +91,9 @@ public class BlockTagListener implements Listener {
      */
     private void tagGrowth(Block block, UUID ownerId) {
         blockTags.setGrownFromPlayer(block, ownerId);
+        if (!settings.chunkPdcEnabled()) {
+            // Ensure the block is tracked for chunk unload saves when chunk PDC is disabled.
+            blockDataManager.get(block);
+        }
     }
 }

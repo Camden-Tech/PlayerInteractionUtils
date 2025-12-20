@@ -12,6 +12,8 @@ public class ConfigSettings {
     private final boolean entitySpawnTagging;
     private final boolean damageTracking;
     private final boolean playerCounters;
+    private final boolean chunkPdcEnabled;
+    private final boolean entityPdcEnabled;
     private final List<String> entityTagWhitelist;
     private final WhitelistEvaluator entityWhitelist;
 
@@ -22,6 +24,8 @@ public class ConfigSettings {
             boolean entitySpawnTagging,
             boolean damageTracking,
             boolean playerCounters,
+            boolean chunkPdcEnabled,
+            boolean entityPdcEnabled,
             List<String> entityTagWhitelist) {
         this(
                 blockPlacementTagging,
@@ -30,6 +34,8 @@ public class ConfigSettings {
                 entitySpawnTagging,
                 damageTracking,
                 playerCounters,
+                chunkPdcEnabled,
+                entityPdcEnabled,
                 entityTagWhitelist,
                 new WhitelistEvaluator(entityTagWhitelist)
         );
@@ -42,6 +48,8 @@ public class ConfigSettings {
             boolean entitySpawnTagging,
             boolean damageTracking,
             boolean playerCounters,
+            boolean chunkPdcEnabled,
+            boolean entityPdcEnabled,
             List<String> entityTagWhitelist,
             WhitelistEvaluator entityWhitelist) {
         this.blockPlacementTagging = blockPlacementTagging;
@@ -50,6 +58,8 @@ public class ConfigSettings {
         this.entitySpawnTagging = entitySpawnTagging;
         this.damageTracking = damageTracking;
         this.playerCounters = playerCounters;
+        this.chunkPdcEnabled = chunkPdcEnabled;
+        this.entityPdcEnabled = entityPdcEnabled;
         this.entityTagWhitelist = entityTagWhitelist;
         this.entityWhitelist = Objects.requireNonNull(entityWhitelist, "entityWhitelist");
     }
@@ -61,6 +71,8 @@ public class ConfigSettings {
         boolean spawnTagging = configuration.getBoolean("features.entity-spawn-tagging", true);
         boolean damage = configuration.getBoolean("features.damage-tracking", true);
         boolean counters = configuration.getBoolean("features.player-counters", true);
+        boolean chunkPdc = configuration.getBoolean("storage.chunk-pdc-enabled", true);
+        boolean entityPdc = configuration.getBoolean("storage.entity-pdc-enabled", true);
         List<String> whitelist = configuration.getStringList("whitelists.entity-tags");
 
         return new ConfigSettings(
@@ -70,6 +82,8 @@ public class ConfigSettings {
                 spawnTagging,
                 damage,
                 counters,
+                chunkPdc,
+                entityPdc,
                 whitelist
         );
     }
@@ -104,5 +118,13 @@ public class ConfigSettings {
 
     public WhitelistEvaluator entityWhitelist() {
         return entityWhitelist;
+    }
+
+    public boolean chunkPdcEnabled() {
+        return chunkPdcEnabled;
+    }
+
+    public boolean entityPdcEnabled() {
+        return entityPdcEnabled;
     }
 }
