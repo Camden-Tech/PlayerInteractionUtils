@@ -59,6 +59,9 @@ public class EntitySpawnListener implements Listener {
         }
 
         LivingEntity entity = event.getEntity();
+        if (!settings.entityWhitelist().isAllowed(entity)) {
+            return;
+        }
         PersistentDataContainer pdc = entity.getPersistentDataContainer();
         NamespacedKey spawnKey = spawnKeyForReason(event.getSpawnReason());
         if (spawnKey != null) {
