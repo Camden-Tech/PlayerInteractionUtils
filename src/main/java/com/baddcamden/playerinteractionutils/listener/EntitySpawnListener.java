@@ -5,6 +5,7 @@ import com.baddcamden.playerinteractionutils.DataKeys;
 import com.baddcamden.playerinteractionutils.PlayerData;
 import com.baddcamden.playerinteractionutils.PlayerDataManager;
 import com.baddcamden.playerinteractionutils.SpawnContextTracker;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -59,8 +60,10 @@ public class EntitySpawnListener implements Listener {
 
         LivingEntity entity = event.getEntity();
         PersistentDataContainer pdc = entity.getPersistentDataContainer();
-        pdc.set(dataKeys.entitySpawnCause, PersistentDataType.STRING, event.getSpawnReason().name());
-        pdc.set(dataKeys.entitySpawnPlayer, PersistentDataType.STRING, playerId.get().toString());
+        NamespacedKey spawnKey = spawnKeyForReason(event.getSpawnReason());
+        if (spawnKey != null) {
+            pdc.set(spawnKey, PersistentDataType.STRING, playerId.get().toString());
+        }
 
         if (!settings.playerCounters()) {
             return;
@@ -77,6 +80,15 @@ public class EntitySpawnListener implements Listener {
             case BREEDING -> PlayerData.CounterType.BREEDING_SPAWNS;
             case EGG, CHICKEN_EGG -> PlayerData.CounterType.EGG_SPAWNS;
             case SPAWNER_EGG -> PlayerData.CounterType.SPAWN_EGG_SPAWNS;
+            default -> null;
+        };
+    }
+
+    private NamespacedKey spawnKeyForReason(CreatureSpawnEvent.SpawnReason reason) {
+        return switch (reason) {
+            case BREEDING -> dataKeys.breedingSpawnPlayer;
+            case EGG, CHICKEN_EGG -> dataKeys.eggSpawnPlayer;
+            case SPAWNER_EGG -> dataKeys.spawnEggSpawnPlayer;
             default -> null;
         };
     }
