@@ -2,7 +2,7 @@ package com.baddcamden.playerinteractionutils.listener;
 
 import com.baddcamden.playerinteractionutils.ConfigSettings;
 import com.baddcamden.playerinteractionutils.DataKeys;
-import com.baddcamden.playerinteractionutils.PlayerData;
+import com.baddcamden.playerinteractionutils.DamageTallySerializer;
 import com.baddcamden.playerinteractionutils.PlayerDataManager;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -40,9 +40,19 @@ public class DamageTrackingListener implements Listener {
         }
 
         if (settings.damageTracking()) {
+            Instant now = Instant.now();
             PersistentDataContainer pdc = victim.getPersistentDataContainer();
             pdc.set(dataKeys.lastHitBy, PersistentDataType.STRING, player.getUniqueId().toString());
-            pdc.set(dataKeys.lastHitAt, PersistentDataType.LONG, Instant.now().toEpochMilli());
+            pdc.set(dataKeys.lastHitAt, PersistentDataType.LONG, now.toEpochMilli());
+
+            if (!(victim instanceof Player)) {
+                DamageTallySerializer.updateDamage(
+                        pdc,
+                        dataKeys.damageByPlayer,
+                        player.getUniqueId(),
+                        event.getFinalDamage(),
+                        now);
+            }
         }
 
         if (settings.playerCounters() && !(victim instanceof Player)) {

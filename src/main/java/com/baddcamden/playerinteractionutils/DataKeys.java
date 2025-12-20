@@ -12,6 +12,7 @@ public class DataKeys {
     public final NamespacedKey entitySpawnPlayer;
     public final NamespacedKey lastHitBy;
     public final NamespacedKey lastHitAt;
+    public final NamespacedKey damageByPlayer;
 
     public DataKeys(Plugin plugin) {
         this.blockOwner = new NamespacedKey(plugin, "block-owner");
@@ -21,5 +22,6 @@ public class DataKeys {
         this.entitySpawnPlayer = new NamespacedKey(plugin, "spawn-player");
         this.lastHitBy = new NamespacedKey(plugin, "last-hit-by");
         this.lastHitAt = new NamespacedKey(plugin, "last-hit-at");
+        this.damageByPlayer = new NamespacedKey(plugin, "damage-by-player");
     }
 }
