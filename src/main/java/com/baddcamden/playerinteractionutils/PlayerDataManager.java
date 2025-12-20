@@ -2,7 +2,6 @@ package com.baddcamden.playerinteractionutils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,10 +44,6 @@ public class PlayerDataManager {
                 logger.warning("Failed to save data for " + playerId + ": " + e.getMessage());
             }
         });
-    }
-
-    public void saveAll(Collection<UUID> players) {
-        players.forEach(this::save);
     }
 
     private File playerFile(UUID playerId) {

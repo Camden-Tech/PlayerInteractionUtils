@@ -6,6 +6,7 @@ import com.baddcamden.playerinteractionutils.ConfigSettings;
 import com.baddcamden.playerinteractionutils.PlayerData;
 import com.baddcamden.playerinteractionutils.PlayerDataManager;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockFertilizeEvent;
@@ -14,6 +15,7 @@ import org.bukkit.event.block.StructureGrowEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.entity.Player;
 
+import java.util.Collection;
 import java.util.UUID;
 
 public class BlockTagListener implements Listener {
@@ -46,14 +48,7 @@ public class BlockTagListener implements Listener {
         if (!settings.blockGrowthTagging()) {
             return;
         }
-        blockTags.getOwner(event.getBlock()).ifPresent(ownerId -> {
-            event.getBlocks().forEach(state -> {
-                tagGrowth(state.getBlock(), ownerId);
-                if (settings.playerCounters()) {
-                    playerDataManager.get(ownerId).increment(PlayerData.CounterType.BLOCK_GROWTH_TAGS);
-                }
-            });
-        });
+        handleBlockGrowth(event.getBlock(), event.getBlocks());
     }
 
     @EventHandler
@@ -61,14 +56,7 @@ public class BlockTagListener implements Listener {
         if (!settings.blockGrowthTagging()) {
             return;
         }
-        blockTags.getOwner(event.getLocation().getBlock()).ifPresent(ownerId -> {
-            event.getBlocks().forEach(state -> {
-                tagGrowth(state.getBlock(), ownerId);
-                if (settings.playerCounters()) {
-                    playerDataManager.get(ownerId).increment(PlayerData.CounterType.BLOCK_GROWTH_TAGS);
-                }
-            });
-        });
+        handleBlockGrowth(event.getLocation().getBlock(), event.getBlocks());
     }
 
     @EventHandler
@@ -83,6 +71,19 @@ public class BlockTagListener implements Listener {
                 playerDataManager.get(ownerId).increment(PlayerData.CounterType.BLOCK_TRANSFORM_TAGS);
             }
         });
+    }
+
+    private void handleBlockGrowth(Block sourceBlock, Collection<BlockState> grownStates) {
+        blockTags.getOwner(sourceBlock).ifPresent(ownerId -> grownStates.forEach(state -> {
+            tagGrowth(state.getBlock(), ownerId);
+            incrementGrowthCounter(ownerId);
+        }));
+    }
+
+    private void incrementGrowthCounter(UUID ownerId) {
+        if (settings.playerCounters()) {
+            playerDataManager.get(ownerId).increment(PlayerData.CounterType.BLOCK_GROWTH_TAGS);
+        }
     }
 
     /**
