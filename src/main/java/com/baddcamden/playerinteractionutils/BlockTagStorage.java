@@ -6,6 +6,7 @@ import org.bukkit.block.Block;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public class BlockTagStorage {
@@ -19,12 +20,24 @@ public class BlockTagStorage {
         setBlockValue(block, keys.blockOwner, ownerId.toString());
     }
 
-    public void setGrownBy(Block block, UUID growerId) {
-        setBlockValue(block, keys.blockGrownBy, growerId.toString());
+    public Optional<UUID> getOwner(Block block) {
+        return getBlockValue(block, keys.blockOwner).map(UUID::fromString);
     }
 
-    public void setTransformedBy(Block block, UUID playerId) {
-        setBlockValue(block, keys.blockTransformedBy, playerId.toString());
+    /**
+     * Tag a block that is the product of growth from a player-owned source block.
+     * The stored value reflects the original owner, not necessarily the actor that caused the growth.
+     */
+    public void setGrownFromPlayer(Block block, UUID ownerId) {
+        setBlockValue(block, keys.blockGrownFromPlayer, ownerId.toString());
+    }
+
+    /**
+     * Tag a block that is the product of a transformation of a player-owned block.
+     * The stored value reflects the original owner, not necessarily the actor that triggered the change.
+     */
+    public void setTransformedFromPlayer(Block block, UUID ownerId) {
+        setBlockValue(block, keys.blockTransformedFromPlayer, ownerId.toString());
     }
 
     private void setBlockValue(Block block, org.bukkit.NamespacedKey key, String value) {
@@ -32,6 +45,13 @@ public class BlockTagStorage {
         PersistentDataContainer container = chunk.getPersistentDataContainer();
         NamespacedKeyWithLocation compositeKey = NamespacedKeyWithLocation.of(key, block.getLocation());
         container.set(compositeKey.key(), PersistentDataType.STRING, value);
+    }
+
+    private Optional<String> getBlockValue(Block block, org.bukkit.NamespacedKey key) {
+        Chunk chunk = block.getChunk();
+        PersistentDataContainer container = chunk.getPersistentDataContainer();
+        NamespacedKeyWithLocation compositeKey = NamespacedKeyWithLocation.of(key, block.getLocation());
+        return Optional.ofNullable(container.get(compositeKey.key(), PersistentDataType.STRING));
     }
 
     private record NamespacedKeyWithLocation(org.bukkit.NamespacedKey key) {

@@ -5,8 +5,8 @@ import org.bukkit.plugin.Plugin;
 
 public class DataKeys {
     public final NamespacedKey blockOwner;
-    public final NamespacedKey blockGrownBy;
-    public final NamespacedKey blockTransformedBy;
+    public final NamespacedKey blockGrownFromPlayer;
+    public final NamespacedKey blockTransformedFromPlayer;
 
     public final NamespacedKey entitySpawnCause;
     public final NamespacedKey entitySpawnPlayer;
@@ -15,8 +15,8 @@ public class DataKeys {
 
     public DataKeys(Plugin plugin) {
         this.blockOwner = new NamespacedKey(plugin, "block-owner");
-        this.blockGrownBy = new NamespacedKey(plugin, "block-grown-by");
-        this.blockTransformedBy = new NamespacedKey(plugin, "block-transformed-by");
+        this.blockGrownFromPlayer = new NamespacedKey(plugin, "block-grown-from-player");
+        this.blockTransformedFromPlayer = new NamespacedKey(plugin, "block-transformed-from-player");
         this.entitySpawnCause = new NamespacedKey(plugin, "spawn-cause");
         this.entitySpawnPlayer = new NamespacedKey(plugin, "spawn-player");
         this.lastHitBy = new NamespacedKey(plugin, "last-hit-by");
