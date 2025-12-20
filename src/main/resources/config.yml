@@ -1,0 +1,14 @@
+author: "BaddCamden"
+
+features:
+  block-placement-tagging: true
+  block-growth-tagging: true
+  block-transform-tagging: true
+  entity-spawn-tagging: true
+  damage-tracking: true
+  player-counters: true
+
+whitelists:
+  entity-tags: []
+
+# Future: whitelist of NBT tags per entity could be added under `whitelists`.
