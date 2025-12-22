@@ -36,6 +36,20 @@ public class BlockTagStorage {
         return blockDataManager != null ? blockDataManager.get(block).ownerId() : Optional.empty();
     }
 
+    public Optional<UUID> getGrownFromPlayer(Block block) {
+        if (chunkPdcEnabled) {
+            return getBlockValue(block, keys.blockGrownFromPlayer).map(UUID::fromString);
+        }
+        return blockDataManager != null ? blockDataManager.get(block).grownFromPlayerId() : Optional.empty();
+    }
+
+    public Optional<UUID> getTransformedFromPlayer(Block block) {
+        if (chunkPdcEnabled) {
+            return getBlockValue(block, keys.blockTransformedFromPlayer).map(UUID::fromString);
+        }
+        return blockDataManager != null ? blockDataManager.get(block).transformedFromPlayerId() : Optional.empty();
+    }
+
     /**
      * Tag a block that is the product of growth from a player-owned source block.
      * The stored value reflects the original owner, not necessarily the actor that caused the growth.

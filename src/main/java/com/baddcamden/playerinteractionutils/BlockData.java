@@ -22,6 +22,10 @@ public class BlockData {
     private UUID ownerId;
     private UUID grownFromPlayerId;
     private UUID transformedFromPlayerId;
+    private static final String WORLD_ID_KEY = "world-id";
+    private static final String X_KEY = "x";
+    private static final String Y_KEY = "y";
+    private static final String Z_KEY = "z";
 
     public BlockData(Block block) {
         this(block.getWorld().getUID(), block.getX(), block.getY(), block.getZ());
@@ -85,10 +89,27 @@ public class BlockData {
         }
 
         YamlConfiguration configuration = YamlConfiguration.loadConfiguration(file);
-        data.ownerId = parseUuid(configuration.getString("owner"));
-        data.grownFromPlayerId = parseUuid(configuration.getString("grown-from-player"));
-        data.transformedFromPlayerId = parseUuid(configuration.getString("transformed-from-player"));
+        applyTags(configuration, data);
         return data;
+    }
+
+    public static Optional<BlockData> load(File file) throws IOException {
+        if (!file.exists()) {
+            return Optional.empty();
+        }
+
+        YamlConfiguration configuration = YamlConfiguration.loadConfiguration(file);
+        UUID worldId = parseUuid(configuration.getString(WORLD_ID_KEY));
+        Integer x = configuration.contains(X_KEY) ? configuration.getInt(X_KEY) : null;
+        Integer y = configuration.contains(Y_KEY) ? configuration.getInt(Y_KEY) : null;
+        Integer z = configuration.contains(Z_KEY) ? configuration.getInt(Z_KEY) : null;
+        if (worldId == null || x == null || y == null || z == null) {
+            return Optional.empty();
+        }
+
+        BlockData data = new BlockData(worldId, x, y, z);
+        applyTags(configuration, data);
+        return Optional.of(data);
     }
 
     public void save(File file) throws IOException {
@@ -97,6 +118,10 @@ public class BlockData {
         }
 
         YamlConfiguration configuration = new YamlConfiguration();
+        configuration.set(WORLD_ID_KEY, worldId.toString());
+        configuration.set(X_KEY, x);
+        configuration.set(Y_KEY, y);
+        configuration.set(Z_KEY, z);
         Map<String, UUID> fields = Map.of(
                 "owner", ownerId,
                 "grown-from-player", grownFromPlayerId,
@@ -105,6 +130,12 @@ public class BlockData {
 
         fields.forEach((key, value) -> configuration.set(key, value != null ? value.toString() : null));
         configuration.save(file);
+    }
+
+    private static void applyTags(YamlConfiguration configuration, BlockData data) {
+        data.ownerId = parseUuid(configuration.getString("owner"));
+        data.grownFromPlayerId = parseUuid(configuration.getString("grown-from-player"));
+        data.transformedFromPlayerId = parseUuid(configuration.getString("transformed-from-player"));
     }
 
     private static UUID parseUuid(String raw) {
