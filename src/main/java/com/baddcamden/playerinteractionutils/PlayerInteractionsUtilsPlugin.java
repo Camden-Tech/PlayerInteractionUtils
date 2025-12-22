@@ -55,8 +55,12 @@ public class PlayerInteractionsUtilsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new BlockTagListener(settings, blockTagStorage, playerDataManager, blockDataManager), this);
         pluginManager.registerEvents(new EntitySpawnListener(settings, dataKeys, playerDataManager, spawnContextTracker, entityDataManager), this);
         pluginManager.registerEvents(new DamageTrackingListener(settings, dataKeys, playerDataManager, entityDataManager), this);
-        pluginManager.registerEvents(new NonPlayerEntityLifecycleListener(entityDataManager, settings.entityPdcEnabled()), this);
-        pluginManager.registerEvents(new ChunkLifecycleListener(blockDataManager, settings.chunkPdcEnabled()), this);
+        if (!settings.entityPdcEnabled()) {
+            pluginManager.registerEvents(new NonPlayerEntityLifecycleListener(entityDataManager, false), this);
+        }
+        if (!settings.chunkPdcEnabled()) {
+            pluginManager.registerEvents(new ChunkLifecycleListener(blockDataManager, false), this);
+        }
     }
 
     public void reloadConfiguration() {
