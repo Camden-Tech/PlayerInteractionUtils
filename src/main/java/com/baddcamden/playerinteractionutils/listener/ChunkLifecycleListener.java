@@ -3,6 +3,7 @@ package com.baddcamden.playerinteractionutils.listener;
 import com.baddcamden.playerinteractionutils.BlockDataManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 
 /**
@@ -15,6 +16,14 @@ public class ChunkLifecycleListener implements Listener {
     public ChunkLifecycleListener(BlockDataManager blockDataManager, boolean chunkPdcEnabled) {
         this.blockDataManager = blockDataManager;
         this.chunkPdcEnabled = chunkPdcEnabled;
+    }
+
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent event) {
+        if (chunkPdcEnabled) {
+            return;
+        }
+        blockDataManager.loadChunk(event.getChunk());
     }
 
     @EventHandler
