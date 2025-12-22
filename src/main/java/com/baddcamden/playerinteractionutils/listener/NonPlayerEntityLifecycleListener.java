@@ -8,6 +8,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 
 /**
@@ -32,6 +33,20 @@ public class NonPlayerEntityLifecycleListener implements Listener {
             return;
         }
         entityDataManager.load(event.getEntity().getUniqueId());
+    }
+
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent event) {
+        if (entityPdcEnabled) {
+            return;
+        }
+        Chunk chunk = event.getChunk();
+        for (Entity entity : chunk.getEntities()) {
+            if (entity instanceof Player) {
+                continue;
+            }
+            entityDataManager.load(entity.getUniqueId());
+        }
     }
 
     @EventHandler
