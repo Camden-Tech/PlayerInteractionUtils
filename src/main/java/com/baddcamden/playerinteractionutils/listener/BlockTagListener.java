@@ -11,7 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockFertilizeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.block.StructureGrowEvent;
+import org.bukkit.event.block.BlockGrowEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.entity.Player;
 
@@ -52,7 +52,7 @@ public class BlockTagListener implements Listener {
     }
 
     @EventHandler
-    public void onStructureGrow(StructureGrowEvent event) {
+    public void onStructureGrow(BlockGrowEvent event) {
         if (!settings.blockGrowthTagging()) {
             return;
         }

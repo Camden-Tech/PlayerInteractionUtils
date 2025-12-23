@@ -94,7 +94,7 @@ public class BlockTagStorage {
             return new NamespacedKeyWithLocation(new org.bukkit.NamespacedKey(root.getNamespace(), root.getKey() + "_" + suffix));
         }
 
-        org.bukkit.NamespacedKey key() {
+        public org.bukkit.NamespacedKey key() {
             return key;
         }
     }
