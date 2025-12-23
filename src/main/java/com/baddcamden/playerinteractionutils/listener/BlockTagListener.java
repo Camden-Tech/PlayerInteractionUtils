@@ -85,7 +85,7 @@ public class BlockTagListener implements Listener {
         if (!settings.blockGrowthTagging()) {
             return;
         }
-        handleBlockGrowth(event.getLocation().getBlock(), event.getBlocks());
+        handleBlockGrowth(event.getBlock(), List.of(event.getNewState()));
     }
 
     @EventHandler
