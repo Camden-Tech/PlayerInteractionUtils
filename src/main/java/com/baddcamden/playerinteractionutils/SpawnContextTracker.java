@@ -30,27 +30,24 @@ public class SpawnContextTracker {
             return;
         }
 
-        Location location = event.getInteractionPoint() != null
-                ? event.getInteractionPoint()
+        Location location = event.getClickedBlock() != null
+                ? event.getClickedBlock().getLocation()
                 : event.getPlayer().getLocation();
         contexts.add(new SpawnContext(event.getPlayer().getUniqueId(), location, CreatureSpawnEvent.SpawnReason.SPAWNER_EGG, Instant.now().toEpochMilli()));
     }
 
     public void recordEggThrow(PlayerEggThrowEvent event) {
         Projectile egg = event.getEgg();
-        CreatureSpawnEvent.SpawnReason reason = event.isHatching()
-                ? CreatureSpawnEvent.SpawnReason.CHICKEN_EGG
-                : CreatureSpawnEvent.SpawnReason.EGG;
+        CreatureSpawnEvent.SpawnReason reason = CreatureSpawnEvent.SpawnReason.EGG;
         contexts.add(new SpawnContext(event.getPlayer().getUniqueId(), egg.getLocation(), reason, Instant.now().toEpochMilli()));
     }
 
     public Optional<UUID> findPlayer(CreatureSpawnEvent event) {
         purge();
         if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.BREEDING && event.getEntity() instanceof org.bukkit.entity.Breedable breedable) {
-            UUID breeder = breedable.getBreedCause();
-            if (breeder != null) {
-                return Optional.of(breeder);
-            }
+            UUID breeder = breedable.getUniqueId();
+            return Optional.of(breeder);
+
         }
 
         for (Iterator<SpawnContext> iterator = contexts.iterator(); iterator.hasNext(); ) {

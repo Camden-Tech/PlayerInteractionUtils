@@ -90,7 +90,7 @@ public class EntitySpawnListener implements Listener {
     private PlayerData.CounterType counterForReason(CreatureSpawnEvent.SpawnReason reason) {
         return switch (reason) {
             case BREEDING -> PlayerData.CounterType.BREEDING_SPAWNS;
-            case EGG, CHICKEN_EGG -> PlayerData.CounterType.EGG_SPAWNS;
+            case EGG -> PlayerData.CounterType.EGG_SPAWNS;
             case SPAWNER_EGG -> PlayerData.CounterType.SPAWN_EGG_SPAWNS;
             default -> null;
         };
@@ -99,7 +99,7 @@ public class EntitySpawnListener implements Listener {
     private NamespacedKey spawnKeyForReason(CreatureSpawnEvent.SpawnReason reason) {
         return switch (reason) {
             case BREEDING -> dataKeys.breedingSpawnPlayer;
-            case EGG, CHICKEN_EGG -> dataKeys.eggSpawnPlayer;
+            case EGG -> dataKeys.eggSpawnPlayer;
             case SPAWNER_EGG -> dataKeys.spawnEggSpawnPlayer;
             default -> null;
         };
