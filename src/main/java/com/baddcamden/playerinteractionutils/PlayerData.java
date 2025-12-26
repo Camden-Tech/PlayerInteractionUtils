@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * Captures per-player counters and aggregated damage statistics persisted on disk.
+ */
 public class PlayerData {
     public enum CounterType {
         BLOCKS_PLACED,
@@ -26,6 +29,9 @@ public class PlayerData {
     private final Map<CounterType, Long> counters = new EnumMap<>(CounterType.class);
     private double damageToNonPlayers;
 
+    /**
+     * Initializes counter values for a player.
+     */
     public PlayerData(UUID playerId) {
         this.playerId = playerId;
         for (CounterType type : CounterType.values()) {
@@ -33,28 +39,46 @@ public class PlayerData {
         }
     }
 
+    /**
+     * @return unique identifier of the player this data belongs to
+     */
     public UUID playerId() {
         return playerId;
     }
 
+    /**
+     * Increments the specified counter and returns the updated value.
+     */
     public long increment(CounterType type) {
         long updated = counters.get(type) + 1;
         counters.put(type, updated);
         return updated;
     }
 
+    /**
+     * Adds to the accumulated non-player damage tally.
+     */
     public void addDamage(double amount) {
         damageToNonPlayers += amount;
     }
 
+    /**
+     * @return mutable map of counters keyed by counter type
+     */
     public Map<CounterType, Long> counters() {
         return counters;
     }
 
+    /**
+     * @return total damage dealt to non-player entities
+     */
     public double damageToNonPlayers() {
         return damageToNonPlayers;
     }
 
+    /**
+     * Loads player data from disk, returning a new initialized instance when no file exists.
+     */
     public static PlayerData load(UUID playerId, File file) throws IOException {
         if (!file.exists()) {
             return new PlayerData(playerId);
@@ -70,6 +94,9 @@ public class PlayerData {
         return data;
     }
 
+    /**
+     * Writes the counters and damage tallies to the provided file location.
+     */
     public void save(File file) throws IOException {
         if (file.getParentFile() != null && !file.getParentFile().exists()) {
             file.getParentFile().mkdirs();

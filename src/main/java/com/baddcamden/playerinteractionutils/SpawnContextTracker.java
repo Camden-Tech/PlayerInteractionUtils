@@ -15,12 +15,20 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Captures short-lived player interactions that may result in entity spawns so the spawn can be
+ * attributed back to the player.
+ */
 public class SpawnContextTracker {
     private static final long EXPIRY_MILLIS = 10_000;
     private static final double MAX_DISTANCE = 4.0;
 
     private final List<SpawnContext> contexts = new LinkedList<>();
 
+    /**
+     * Records the use of a spawn egg, storing the player and the click location to match against a
+     * subsequent spawn event.
+     */
     public void recordSpawnEggUse(PlayerInteractEvent event) {
         if (event.getItem() == null) {
             return;
@@ -36,12 +44,19 @@ public class SpawnContextTracker {
         contexts.add(new SpawnContext(event.getPlayer().getUniqueId(), location, CreatureSpawnEvent.SpawnReason.SPAWNER_EGG, Instant.now().toEpochMilli()));
     }
 
+    /**
+     * Records the throw of a regular egg, which may result in a spawned entity.
+     */
     public void recordEggThrow(PlayerEggThrowEvent event) {
         Projectile egg = event.getEgg();
         CreatureSpawnEvent.SpawnReason reason = CreatureSpawnEvent.SpawnReason.EGG;
         contexts.add(new SpawnContext(event.getPlayer().getUniqueId(), egg.getLocation(), reason, Instant.now().toEpochMilli()));
     }
 
+    /**
+     * Attempts to resolve the player responsible for a spawn event based on recent interactions
+     * and proximity. Removes consumed contexts to avoid duplicate matches.
+     */
     public Optional<UUID> findPlayer(CreatureSpawnEvent event) {
         purge();
         if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.BREEDING && event.getEntity() instanceof org.bukkit.entity.Breedable breedable) {
@@ -67,11 +82,17 @@ public class SpawnContextTracker {
         return Optional.empty();
     }
 
+    /**
+     * Discards stale spawn contexts so only recent player actions are considered.
+     */
     private void purge() {
         long now = Instant.now().toEpochMilli();
         contexts.removeIf(context -> now - context.timestamp() > EXPIRY_MILLIS);
     }
 
+    /**
+     * Captures player attribution for an entity spawn along with the location and timestamp.
+     */
     private record SpawnContext(UUID playerId, Location location, CreatureSpawnEvent.SpawnReason reason, long timestamp) {
     }
 }

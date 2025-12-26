@@ -26,14 +26,23 @@ public class NonPlayerEntityData {
     private UUID lastHitBy;
     private long lastHitAt;
 
+    /**
+     * @param entityId unique identifier for the entity whose data is tracked
+     */
     public NonPlayerEntityData(UUID entityId) {
         this.entityId = Objects.requireNonNull(entityId, "entityId");
     }
 
+    /**
+     * @return tracked entity ID
+     */
     public UUID entityId() {
         return entityId;
     }
 
+    /**
+     * Associates a spawn reason with the player who caused it.
+     */
     public void setSpawnOwner(CreatureSpawnEvent.SpawnReason reason, UUID ownerId) {
         if (reason == null || ownerId == null) {
             return;
@@ -41,10 +50,16 @@ public class NonPlayerEntityData {
         spawnOwners.put(reason, ownerId);
     }
 
+    /**
+     * Looks up the stored spawn owner for the given reason.
+     */
     public Optional<UUID> spawnOwner(CreatureSpawnEvent.SpawnReason reason) {
         return Optional.ofNullable(spawnOwners.get(reason));
     }
 
+    /**
+     * Stores the most recent player hit attribution and timestamp.
+     */
     public void recordLastHit(UUID playerId, Instant when) {
         if (playerId == null || when == null) {
             return;
@@ -53,14 +68,23 @@ public class NonPlayerEntityData {
         lastHitAt = when.toEpochMilli();
     }
 
+    /**
+     * @return last player to hit the entity, if known
+     */
     public Optional<UUID> lastHitBy() {
         return Optional.ofNullable(lastHitBy);
     }
 
+    /**
+     * @return timestamp of the last recorded hit
+     */
     public long lastHitAt() {
         return lastHitAt;
     }
 
+    /**
+     * Adds damage dealt by a player and refreshes the entry's timestamp, ignoring invalid input.
+     */
     public void addDamage(UUID playerId, double amount, Instant now) {
         if (playerId == null || now == null || amount <= 0) {
             return;
@@ -71,11 +95,17 @@ public class NonPlayerEntityData {
         damageTallies.put(playerId, new DamageTallySerializer.DamageEntry(updatedDamage, now));
     }
 
+    /**
+     * Returns a defensive copy of non-expired damage tallies, purging old entries first.
+     */
     public Map<UUID, DamageTallySerializer.DamageEntry> damageTallies(Instant now) {
         purgeDamage(now);
         return Map.copyOf(damageTallies);
     }
 
+    /**
+     * Loads entity metadata from disk, returning an empty data container when none exists.
+     */
     public static NonPlayerEntityData load(UUID entityId, File file) throws IOException {
         NonPlayerEntityData data = new NonPlayerEntityData(entityId);
         if (!file.exists()) {
@@ -104,6 +134,9 @@ public class NonPlayerEntityData {
         return data;
     }
 
+    /**
+     * Persists the spawn owners, last hit metadata, and damage tallies to disk.
+     */
     public void save(File file) throws IOException {
         if (file.getParentFile() != null && !file.getParentFile().exists()) {
             file.getParentFile().mkdirs();
