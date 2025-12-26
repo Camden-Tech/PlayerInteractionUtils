@@ -3,6 +3,10 @@ package com.baddcamden.playerinteractionutils;
 import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.Plugin;
 
+/**
+ * Centralizes the {@link NamespacedKey} instances used to tag persistent data values for
+ * blocks and entities across the plugin.
+ */
 public class DataKeys {
     public final NamespacedKey blockOwner;
     public final NamespacedKey blockGrownFromPlayer;
@@ -15,6 +19,12 @@ public class DataKeys {
     public final NamespacedKey lastHitAt;
     public final NamespacedKey damageByPlayer;
 
+    /**
+     * Creates keys that are namespaced to the provided plugin instance, ensuring they do not
+     * collide with data from other plugins.
+     *
+     * @param plugin plugin used to derive the namespace for each key
+     */
     public DataKeys(Plugin plugin) {
         this.blockOwner = new NamespacedKey(plugin, "block-owner");
         this.blockGrownFromPlayer = new NamespacedKey(plugin, "block-grown-from-player");
@@ -27,6 +37,12 @@ public class DataKeys {
         this.damageByPlayer = new NamespacedKey(plugin, "damage-by-player");
     }
 
+    /**
+     * Creates keys with an explicit namespace, useful for tests where no plugin instance is
+     * available.
+     *
+     * @param namespace namespace string to prefix each key with
+     */
     public DataKeys(String namespace) {
         this.blockOwner = new NamespacedKey(namespace, "block-owner");
         this.blockGrownFromPlayer = new NamespacedKey(namespace, "block-grown-from-player");

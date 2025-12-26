@@ -19,6 +19,10 @@ public class NonPlayerEntityDataManager {
     private final Logger logger;
     private final Map<UUID, NonPlayerEntityData> dataByEntity = new ConcurrentHashMap<>();
 
+    /**
+     * @param dataFolder plugin data folder
+     * @param logger     logger used to report storage issues
+     */
     public NonPlayerEntityDataManager(File dataFolder, Logger logger) {
         this.entityDirectory = new File(dataFolder, "entities");
         this.logger = logger;
@@ -27,10 +31,16 @@ public class NonPlayerEntityDataManager {
         }
     }
 
+    /**
+     * Retrieves cached data for the entity or loads it from disk if absent.
+     */
     public NonPlayerEntityData get(UUID entityId) {
         return dataByEntity.computeIfAbsent(entityId, this::loadOrCreate);
     }
 
+    /**
+     * Loads entity data from disk into the cache, logging on failure.
+     */
     public void load(UUID entityId) {
         File file = entityFile(entityId);
         try {
@@ -41,6 +51,9 @@ public class NonPlayerEntityDataManager {
         }
     }
 
+    /**
+     * Saves cached data for a specific entity if present.
+     */
     public void save(UUID entityId) {
         Optional.ofNullable(dataByEntity.get(entityId)).ifPresent(data -> {
             File file = entityFile(entityId);
@@ -52,22 +65,38 @@ public class NonPlayerEntityDataManager {
         });
     }
 
+    /**
+     * Saves data for the provided collection of entity IDs.
+     */
     public void saveAll(Collection<UUID> entities) {
         entities.forEach(this::save);
     }
 
+    /**
+     * Saves all tracked entities currently in memory.
+     */
     public void saveAllTracked() {
         dataByEntity.keySet().forEach(this::save);
     }
 
+    /**
+     * Clears cached data for an entity when it is no longer needed in memory.
+     */
     public void clear(UUID entityId) {
         dataByEntity.remove(entityId);
     }
 
+    /**
+     * @return file location for the given entity's data
+     */
     private File entityFile(UUID entityId) {
         return new File(entityDirectory, entityId.toString() + ".yml");
     }
 
+    /**
+     * Attempts to load existing data for an entity, creating a new container if none exists or
+     * loading fails.
+     */
     private NonPlayerEntityData loadOrCreate(UUID entityId) {
         File file = entityFile(entityId);
         if (file.exists()) {
