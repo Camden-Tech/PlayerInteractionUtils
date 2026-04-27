@@ -16,13 +16,14 @@ PlayerInteractionsUtils tags player-caused interactions on Spigot servers so oth
 4. Restrict which entities are tagged by adding vanilla or namespaced IDs (e.g., `minecraft:cow`) or tag keys (e.g., `#minecraft:animals`) to `whitelists.entity-tags`.
 
 ## Usage examples
-- **Find who placed a block:**
+- **Find who placed a block (storage-agnostic):**
   ```java
-  Optional<UUID> owner = block.getChunk()
-      .getPersistentDataContainer()
-      .get(new NamespacedKey(plugin, "block-owner_x_y_z"), PersistentDataType.STRING)
-      .map(UUID::fromString);
-  // or, when chunk PDC is disabled, read from plugins/PlayerInteractionsUtils/blocks/<world>/<x>,<y>,<z>.yml
+  BlockTagStorage tags = new BlockTagStorage(
+      new DataKeys(plugin),
+      plugin.getConfig().getBoolean("storage.chunk-pdc-enabled", true),
+      new BlockDataManager(plugin.getDataFolder(), plugin.getLogger())
+  );
+  Optional<UUID> owner = tags.getOwner(block);
   ```
 - **Attribute a spawned mob:**
   ```java
@@ -44,7 +45,52 @@ PlayerInteractionsUtils tags player-caused interactions on Spigot servers so oth
       DamageTallySerializer.deserialize(serialized, Instant.now());
   ```
 
-> Tip: When PDC storage is disabled, use `NonPlayerEntityDataManager` and `BlockDataManager` to load the YAML-backed data instead of reading from PDC.
+> Tip: When PDC storage is disabled, block ownership is persisted under `plugins/PlayerInteractionsUtils/blocks/<block-id>.yml` and chunk mappings under `plugins/PlayerInteractionsUtils/chunk-blocks/<chunk-key>.yml`.
+
+## Querying player-placed blocks by area
+`BlockTagStorage` now exposes several overloads to enumerate blocks with a stored owner tag.
+
+### 1) By chunk
+```java
+Set<Block> placedInChunk = tags.getPlayerPlacedBlocks(chunk);
+Set<Block> placedInChunkCoords = tags.getPlayerPlacedBlocks(world, chunkX, chunkZ);
+```
+
+### 2) By radius around a location or player
+```java
+Set<Block> sphericalAroundLoc = tags.getPlayerPlacedBlocks(centerLocation, 16.0);
+Set<Block> sphericalAroundPlayer = tags.getPlayerPlacedBlocks(player, 16.0);
+```
+
+### 3) By axis radii around a location (box-shaped query)
+```java
+Set<Block> aroundLocAxes = tags.getPlayerPlacedBlocks(centerLocation, 16.0, 8.0, 16.0);
+```
+
+### 4) By explicit world-space bounds
+```java
+Set<Block> byNumericBounds = tags.getPlayerPlacedBlocks(
+    world,
+    minX, minY, minZ,
+    maxX, maxY, maxZ
+);
+
+BoundingBox box = BoundingBox.of(minLocation, maxLocation);
+Set<Block> byBoundingBox = tags.getPlayerPlacedBlocks(box, world);
+```
+
+### 5) By bounds relative to a player
+```java
+// Asymmetric offsets relative to player's current location
+Set<Block> byRelativeOffsets = tags.getPlayerPlacedBlocks(
+    player,
+    -10, -5, -10,
+     20, 15,  20
+);
+
+// Symmetric X/Z and Y radius shortcut
+Set<Block> byRelativeRadii = tags.getPlayerPlacedBlocks(player, 16, 8);
+```
 
 ## Integration surface for hook plugins
 The following classes and members are most relevant when integrating with PlayerInteractionsUtils:
@@ -57,9 +103,15 @@ The following classes and members are most relevant when integrating with Player
   - `setOwner(Block, UUID)`, `getOwner(Block)` — write/read the placing player.
   - `setGrownFromPlayer(Block, UUID)`, `getGrownFromPlayer(Block)` — propagate ownership through growth (e.g., crops, saplings).
   - `setTransformedFromPlayer(Block, UUID)`, `getTransformedFromPlayer(Block)` — track transformations (e.g., logs -> stripped logs).
+  - `getPlayerPlacedBlocks(Chunk)`, `getPlayerPlacedBlocks(World, int, int)` — query player-placed blocks in a chunk.
+  - `getPlayerPlacedBlocks(Location, double)` — spherical query around a location.
+  - `getPlayerPlacedBlocks(Location, double, double, double)` — axis-radius box query around a location.
+  - `getPlayerPlacedBlocks(BoundingBox, World)`, `getPlayerPlacedBlocks(World, double, double, double, double, double, double)` — world-space bound queries.
+  - `getPlayerPlacedBlocks(Player, int, int, int, int, int, int)`, `getPlayerPlacedBlocks(Player, int, int)`, `getPlayerPlacedBlocks(Player, double)` — player-relative bound/radius queries.
 - **`BlockDataManager`** (constructor: `BlockDataManager(File dataFolder, Logger logger)`) — access YAML-backed block metadata when chunk PDC is disabled.
   - `get(Block)` — obtain mutable `BlockData` for a block.
   - `load(Block)` / `save(Block)` / `saveAllTracked()` — lifecycle helpers for disk persistence.
+  - `getOwnedBlocksInChunk(Chunk)` — retrieve owner-tagged block records for a chunk from memory and/or disk.
 - **`BlockData`** — disk model for block metadata when PDC is unavailable.
   - `ownerId()`, `grownFromPlayerId()`, `transformedFromPlayerId()` — optional ownership values.
   - `setOwner(UUID)`, `setGrownFromPlayerId(UUID)`, `setTransformedFromPlayerId(UUID)` — mutation helpers used by listeners or hook plugins.
