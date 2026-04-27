@@ -6,6 +6,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -110,6 +111,39 @@ public class BlockDataManager {
     public void saveAllTracked() {
         dataByBlock.keySet().forEach(this::save);
         blockIdsByChunk.forEach(this::persistChunkMapping);
+    }
+
+    /**
+     * Retrieves all placed-block records in the provided chunk that have a known owner.
+     * Data may come from memory and/or disk depending on current chunk lifecycle state.
+     */
+    public Set<BlockData> getOwnedBlocksInChunk(Chunk chunk) {
+        long chunkKey = BlockKey.chunkKey(chunk.getWorld(), chunk.getX(), chunk.getZ());
+        Set<UUID> blockIds = new HashSet<>(loadChunkMapping(chunkKey));
+        blockIds.addAll(blockIdsByChunk.getOrDefault(chunkKey, Set.of()));
+
+        Set<BlockData> ownedBlocks = new HashSet<>();
+        blockIds.forEach(blockId -> {
+            Optional<BlockData> cached = Optional.ofNullable(dataByBlock.get(blockId));
+            if (cached.isPresent()) {
+                cached.filter(data -> belongsToChunk(chunk, data))
+                        .filter(data -> data.ownerId().isPresent())
+                        .ifPresent(ownedBlocks::add);
+                return;
+            }
+
+            File file = blockFile(blockId);
+            try {
+                BlockData.load(file)
+                        .filter(data -> belongsToChunk(chunk, data))
+                        .filter(data -> data.ownerId().isPresent())
+                        .ifPresent(ownedBlocks::add);
+            } catch (IOException e) {
+                logger.warning("Failed to load block data for " + blockId + ": " + e.getMessage());
+            }
+        });
+
+        return ownedBlocks;
     }
 
     /**
