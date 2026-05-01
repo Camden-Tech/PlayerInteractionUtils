@@ -1,6 +1,6 @@
 name: PlayerInteractionsUtils
 main: com.baddcamden.playerinteractionutils.PlayerInteractionsUtilsPlugin
-version: 0.1.0-SNAPSHOT
+version: 1.0.0-SNAPSHOT
 api-version: 1.21
 author: BaddCamden
 description: Utilities for tagging player-caused interactions. See SPEC.md for the feature checklist.
