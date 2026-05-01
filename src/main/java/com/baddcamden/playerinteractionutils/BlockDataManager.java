@@ -55,7 +55,11 @@ public class BlockDataManager {
     }
 
     public void saveAllTracked() {
-        org.bukkit.Bukkit.getWorlds().forEach(world -> world.getLoadedChunks().forEach(this::saveChunk));
+        for (World world : org.bukkit.Bukkit.getWorlds()) {
+            for (Chunk chunk : world.getLoadedChunks()) {
+                saveChunk(chunk);
+            }
+        }
     }
 
     public Set<BlockData> getOwnedBlocksInChunk(Chunk chunk) {
