@@ -30,7 +30,7 @@ public class PlayerInteractionsUtilsPlugin extends JavaPlugin {
         entityDataManager = new NonPlayerEntityDataManager(getDataFolder(), getLogger());
         blockDataManager = new BlockDataManager(getDataFolder(), getLogger());
         spawnContextTracker = new SpawnContextTracker();
-        blockTagStorage = new BlockTagStorage(dataKeys, settings.chunkPdcEnabled(), blockDataManager);
+        blockTagStorage = new BlockTagStorage(this, dataKeys, settings.chunkPdcEnabled(), blockDataManager);
 
         registerListeners();
 
