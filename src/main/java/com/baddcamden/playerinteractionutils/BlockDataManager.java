@@ -1,11 +1,13 @@
 package com.baddcamden.playerinteractionutils;
 
 import org.bukkit.Chunk;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -15,242 +17,145 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
- * Disk-backed storage for block metadata when chunk {@code PersistentDataContainer} is not available or persistent.
- * Data is loaded when a chunk enters memory and saved when it leaves, mirroring the player directory layout.
+ * Chunk-scoped disk-backed storage for block metadata when chunk {@code PersistentDataContainer}
+ * is not available or persistent.
  */
 public class BlockDataManager {
-    private final File blockDirectory;
-    private final File chunkDirectory;
+    private final File chunksDirectory;
     private final Logger logger;
-    private final Map<UUID, BlockData> dataByBlock = new ConcurrentHashMap<>();
-    private final Map<Long, Set<UUID>> blockIdsByChunk = new ConcurrentHashMap<>();
+    private final Map<Long, Map<UUID, BlockData>> dataByChunk = new ConcurrentHashMap<>();
 
-    /**
-     * @param dataFolder plugin data folder
-     * @param logger     logger used to report load/save issues
-     */
     public BlockDataManager(File dataFolder, Logger logger) {
-        this.blockDirectory = new File(dataFolder, "blocks");
-        this.chunkDirectory = new File(dataFolder, "chunk-blocks");
+        this.chunksDirectory = new File(dataFolder, "chunks");
         this.logger = logger;
-        if (!blockDirectory.exists()) {
-            blockDirectory.mkdirs();
-        }
-        if (!chunkDirectory.exists()) {
-            chunkDirectory.mkdirs();
+        if (!chunksDirectory.exists()) {
+            chunksDirectory.mkdirs();
         }
     }
 
-    /**
-     * Retrieves or creates block data for the given block, tracking it under its chunk for later persistence.
-     */
     public BlockData get(Block block) {
-        UUID blockId = BlockKey.of(block);
         long chunkKey = BlockKey.chunkKey(block.getWorld(), block.getChunk().getX(), block.getChunk().getZ());
-        trackBlock(chunkKey, blockId);
-        return dataByBlock.computeIfAbsent(blockId, id -> loadOrCreate(block, id));
+        Map<UUID, BlockData> blockMap = dataByChunk.computeIfAbsent(chunkKey, key -> new ConcurrentHashMap<>());
+        UUID blockId = BlockKey.of(block);
+        return blockMap.computeIfAbsent(blockId, ignored -> new BlockData(block));
     }
 
-    /**
-     * Loads block data from disk for a specific block and caches it, registering the block under its chunk.
-     */
-    public void load(Block block) {
-        UUID blockId = BlockKey.of(block);
-        long chunkKey = BlockKey.chunkKey(block.getWorld(), block.getChunk().getX(), block.getChunk().getZ());
-        trackBlock(chunkKey, blockId);
-        File file = blockFile(blockId);
-        try {
-            BlockData data = BlockData.load(block, file);
-            dataByBlock.put(blockId, data);
-        } catch (IOException e) {
-            logger.warning("Failed to load block data for " + blockId + ": " + e.getMessage());
-        }
-    }
-
-    /**
-     * Loads all tracked block data for a chunk when it is loaded into memory.
-     */
     public void loadChunk(Chunk chunk) {
-        long chunkKey = BlockKey.chunkKey(chunk.getWorld(), chunk.getX(), chunk.getZ());
-        Set<UUID> trackedBlocks = blockIdsByChunk.computeIfAbsent(chunkKey, key -> ConcurrentHashMap.newKeySet());
-        loadChunkMapping(chunkKey).forEach(blockId -> {
-            trackedBlocks.add(blockId);
-            File file = blockFile(blockId);
-            try {
-                Optional<BlockData> data = BlockData.load(file);
-                data.filter(blockData -> belongsToChunk(chunk, blockData)).ifPresent(blockData -> {
-                    dataByBlock.put(blockId, blockData);
-                });
-            } catch (IOException e) {
-                logger.warning("Failed to load block data for " + blockId + ": " + e.getMessage());
-            }
-        });
+        dataByChunk.put(chunkKey(chunk), loadChunkData(chunk));
     }
 
-    /**
-     * Persists block data for the specified block, if present.
-     */
-    public void save(Block block) {
-        save(BlockKey.of(block));
-    }
-
-    /**
-     * Saves all block data tracked for a chunk and writes the chunk-to-block mapping to disk.
-     */
     public void saveChunk(Chunk chunk) {
-        long key = BlockKey.chunkKey(chunk.getWorld(), chunk.getX(), chunk.getZ());
-        Set<UUID> blocks = blockIdsByChunk.getOrDefault(key, Set.of());
-        blocks.forEach(this::save);
-        persistChunkMapping(key, blocks);
-        blockIdsByChunk.remove(key);
+        long chunkKey = chunkKey(chunk);
+        persistChunk(chunk, dataByChunk.getOrDefault(chunkKey, Map.of()));
+        dataByChunk.remove(chunkKey);
     }
 
-    /**
-     * Saves all blocks currently cached and persists outstanding chunk mappings.
-     */
+    public void unloadChunk(Chunk chunk) {
+        dataByChunk.remove(chunkKey(chunk));
+    }
+
     public void saveAllTracked() {
-        dataByBlock.keySet().forEach(this::save);
-        blockIdsByChunk.forEach(this::persistChunkMapping);
+        org.bukkit.Bukkit.getWorlds().forEach(world -> world.getLoadedChunks().forEach(this::saveChunk));
     }
 
-    /**
-     * Retrieves all placed-block records in the provided chunk that have a known owner.
-     * Data may come from memory and/or disk depending on current chunk lifecycle state.
-     */
     public Set<BlockData> getOwnedBlocksInChunk(Chunk chunk) {
-        long chunkKey = BlockKey.chunkKey(chunk.getWorld(), chunk.getX(), chunk.getZ());
-        Set<UUID> blockIds = new HashSet<>(loadChunkMapping(chunkKey));
-        blockIds.addAll(blockIdsByChunk.getOrDefault(chunkKey, Set.of()));
-
-        Set<BlockData> ownedBlocks = new HashSet<>();
-        blockIds.forEach(blockId -> {
-            Optional<BlockData> cached = Optional.ofNullable(dataByBlock.get(blockId));
-            if (cached.isPresent()) {
-                cached.filter(data -> belongsToChunk(chunk, data))
-                        .filter(data -> data.ownerId().isPresent())
-                        .ifPresent(ownedBlocks::add);
-                return;
-            }
-
-            File file = blockFile(blockId);
-            try {
-                BlockData.load(file)
-                        .filter(data -> belongsToChunk(chunk, data))
-                        .filter(data -> data.ownerId().isPresent())
-                        .ifPresent(ownedBlocks::add);
-            } catch (IOException e) {
-                logger.warning("Failed to load block data for " + blockId + ": " + e.getMessage());
-            }
-        });
-
-        return ownedBlocks;
+        return new HashSet<>(dataByChunk
+                .getOrDefault(chunkKey(chunk), Map.of())
+                .values()
+                .stream()
+                .filter(data -> data.ownerId().isPresent())
+                .toList());
     }
 
-    /**
-     * @return file location for the given block ID
-     */
-    private File blockFile(UUID blockId) {
-        return new File(blockDirectory, blockId.toString() + ".yml");
-    }
-
-    /**
-     * @return file location for the chunk mapping referenced by the chunk key
-     */
-    private File chunkFile(long chunkKey) {
-        return new File(chunkDirectory, chunkKey + ".yml");
-    }
-
-    /**
-     * Loads block data if it exists on disk or constructs a new instance for the given block.
-     */
-    private BlockData loadOrCreate(Block block, UUID blockId) {
-        File file = blockFile(blockId);
-        if (file.exists()) {
-            try {
-                return BlockData.load(block, file);
-            } catch (IOException e) {
-                logger.warning("Failed to load block data for " + blockId + ": " + e.getMessage());
-            }
+    private Map<UUID, BlockData> loadChunkData(Chunk chunk) {
+        File file = chunkFile(chunk.getWorld(), chunk.getX(), chunk.getZ());
+        if (!file.exists()) {
+            return new ConcurrentHashMap<>();
         }
-        return new BlockData(block);
-    }
 
-    /**
-     * Saves cached data for a block ID if available.
-     */
-    private void save(UUID blockId) {
-        Optional.ofNullable(dataByBlock.get(blockId)).ifPresent(data -> {
-            File file = blockFile(blockId);
-            try {
-                data.save(file);
-            } catch (IOException e) {
-                logger.warning("Failed to save block data for " + blockId + ": " + e.getMessage());
+        YamlConfiguration configuration = YamlConfiguration.loadConfiguration(file);
+        Map<UUID, BlockData> loaded = new ConcurrentHashMap<>();
+        for (String blockKey : configuration.getConfigurationSection("blocks") != null
+                ? configuration.getConfigurationSection("blocks").getKeys(false)
+                : Set.<String>of()) {
+            String path = "blocks." + blockKey;
+            UUID worldId = parseUuid(configuration.getString(path + ".world-id"));
+            Integer x = readInt(configuration, path + ".x");
+            Integer y = readInt(configuration, path + ".y");
+            Integer z = readInt(configuration, path + ".z");
+            if (worldId == null || x == null || y == null || z == null) {
+                continue;
             }
-        });
+            BlockData data = new BlockData(worldId, x, y, z);
+            data.setOwner(parseUuid(configuration.getString(path + ".owner")));
+            data.setGrownFromPlayerId(parseUuid(configuration.getString(path + ".grown-from-player")));
+            data.setTransformedFromPlayerId(parseUuid(configuration.getString(path + ".transformed-from-player")));
+            if (data.ownerId().isEmpty() && data.grownFromPlayerId().isEmpty() && data.transformedFromPlayerId().isEmpty()) {
+                continue;
+            }
+            loaded.put(data.blockId(), data);
+        }
+        return loaded;
     }
 
-    /**
-     * Persists the mapping from a chunk to its tracked block IDs or deletes it if empty.
-     */
-    private void persistChunkMapping(long chunkKey, Set<UUID> blockIds) {
-        File file = chunkFile(chunkKey);
-        if (blockIds.isEmpty()) {
+    private void persistChunk(Chunk chunk, Map<UUID, BlockData> blocks) {
+        persistChunk(chunk.getWorld(), chunk.getX(), chunk.getZ(), blocks);
+    }
+
+    private void persistChunk(World world, int chunkX, int chunkZ, Map<UUID, BlockData> blocks) {
+        File file = chunkFile(world, chunkX, chunkZ);
+        Map<UUID, BlockData> onlyTagged = blocks.values().stream()
+                .filter(data -> data.ownerId().isPresent() || data.grownFromPlayerId().isPresent() || data.transformedFromPlayerId().isPresent())
+                .sorted(Comparator.comparingInt(BlockData::x).thenComparingInt(BlockData::y).thenComparingInt(BlockData::z))
+                .collect(java.util.stream.Collectors.toMap(BlockData::blockId, data -> data, (a, b) -> a, java.util.LinkedHashMap::new));
+
+        if (onlyTagged.isEmpty()) {
             if (file.exists()) {
                 file.delete();
             }
             return;
         }
 
+        YamlConfiguration configuration = new YamlConfiguration();
+        onlyTagged.values().forEach(data -> {
+            String base = "blocks." + data.x() + "," + data.y() + "," + data.z();
+            configuration.set(base + ".world-id", data.worldId().toString());
+            configuration.set(base + ".x", data.x());
+            configuration.set(base + ".y", data.y());
+            configuration.set(base + ".z", data.z());
+            configuration.set(base + ".owner", data.ownerId().map(UUID::toString).orElse(null));
+            configuration.set(base + ".grown-from-player", data.grownFromPlayerId().map(UUID::toString).orElse(null));
+            configuration.set(base + ".transformed-from-player", data.transformedFromPlayerId().map(UUID::toString).orElse(null));
+        });
+
         try {
-            YamlConfiguration configuration = new YamlConfiguration();
-            configuration.set("blocks", blockIds.stream().map(UUID::toString).toList());
             configuration.save(file);
         } catch (IOException e) {
-            logger.warning("Failed to save chunk block mapping for " + chunkKey + ": " + e.getMessage());
+            logger.warning("Failed to save chunk block data for " + chunkX + "," + chunkZ + ": " + e.getMessage());
         }
     }
 
-    /**
-     * Reads the list of block IDs tracked for a given chunk key.
-     */
-    private Set<UUID> loadChunkMapping(long chunkKey) {
-        File file = chunkFile(chunkKey);
-        if (!file.exists()) {
-            return Set.of();
-        }
-        YamlConfiguration configuration = YamlConfiguration.loadConfiguration(file);
-        return configuration.getStringList("blocks").stream()
-                .map(this::parseUuid)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(java.util.stream.Collectors.toSet());
+    private File chunkFile(World world, int chunkX, int chunkZ) {
+        return new File(chunksDirectory, chunkX + "x" + 0 + "y" + chunkZ + "z," + world.getUID() + ".yml");
     }
 
-    /**
-     * Safely parses a UUID from a string, warning on invalid values.
-     */
-    private Optional<UUID> parseUuid(String raw) {
+    private long chunkKey(Chunk chunk) {
+        return BlockKey.chunkKey(chunk.getWorld(), chunk.getX(), chunk.getZ());
+    }
+
+    private Integer readInt(YamlConfiguration configuration, String path) {
+        return configuration.contains(path) ? configuration.getInt(path) : null;
+    }
+
+    private UUID parseUuid(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
         try {
-            return Optional.of(UUID.fromString(raw));
-        } catch (IllegalArgumentException e) {
-            logger.warning("Encountered invalid block UUID in chunk mapping: " + raw);
-            return Optional.empty();
+            return UUID.fromString(raw);
+        } catch (IllegalArgumentException ex) {
+            return null;
         }
     }
 
-    /**
-     * Verifies that a {@link BlockData} instance belongs to the provided chunk coordinates.
-     */
-    private boolean belongsToChunk(Chunk chunk, BlockData data) {
-        int chunkX = Math.floorDiv(data.x(), 16);
-        int chunkZ = Math.floorDiv(data.z(), 16);
-        return chunk.getWorld().getUID().equals(data.worldId()) && chunk.getX() == chunkX && chunk.getZ() == chunkZ;
-    }
-
-    /**
-     * Tracks a block ID against its chunk so it can be saved alongside the chunk lifecycle.
-     */
-    private void trackBlock(long chunkKey, UUID blockId) {
-        blockIdsByChunk.computeIfAbsent(chunkKey, key -> ConcurrentHashMap.newKeySet()).add(blockId);
-    }
 }
