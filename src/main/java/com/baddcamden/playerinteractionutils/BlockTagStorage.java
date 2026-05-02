@@ -32,7 +32,8 @@ public class BlockTagStorage {
     public void setOwner(Block block, UUID ownerId) {
         if (chunkPdcEnabled) {
             setBlockValue(block, keys.blockOwner, ownerId != null ? ownerId.toString() : null);
-        } else if (blockDataManager != null) {
+        }
+        if (blockDataManager != null) {
             blockDataManager.get(block).setOwner(ownerId);
         }
     }
@@ -64,7 +65,8 @@ public class BlockTagStorage {
     public void setGrownFromPlayer(Block block, UUID ownerId) {
         if (chunkPdcEnabled) {
             setBlockValue(block, keys.blockGrownFromPlayer, ownerId != null ? ownerId.toString() : null);
-        } else if (blockDataManager != null) {
+        }
+        if (blockDataManager != null) {
             blockDataManager.get(block).setGrownFromPlayerId(ownerId);
         }
     }
@@ -72,9 +74,16 @@ public class BlockTagStorage {
     public void setTransformedFromPlayer(Block block, UUID ownerId) {
         if (chunkPdcEnabled) {
             setBlockValue(block, keys.blockTransformedFromPlayer, ownerId != null ? ownerId.toString() : null);
-        } else if (blockDataManager != null) {
+        }
+        if (blockDataManager != null) {
             blockDataManager.get(block).setTransformedFromPlayerId(ownerId);
         }
+    }
+
+    public void clearTags(Block block) {
+        setOwner(block, null);
+        setGrownFromPlayer(block, null);
+        setTransformedFromPlayer(block, null);
     }
 
     public Set<Block> getPlayerPlacedBlocks(Chunk chunk) {
