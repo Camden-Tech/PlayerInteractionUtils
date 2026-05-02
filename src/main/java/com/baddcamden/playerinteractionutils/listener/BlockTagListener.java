@@ -14,8 +14,17 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockFertilizeEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.BlockMultiPlaceEvent;
 import org.bukkit.event.block.BlockGrowEvent;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPistonExtendEvent;
+import org.bukkit.event.block.BlockPistonRetractEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.block.BlockBurnEvent;
+import org.bukkit.event.block.BlockFadeEvent;
+import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.entity.Player;
 
 import java.util.Collection;
@@ -73,6 +82,20 @@ public class BlockTagListener implements Listener {
     }
 
     @EventHandler
+    public void onBlockMultiPlaced(BlockMultiPlaceEvent event) {
+        if (!settings.blockPlacementTagging()) {
+            return;
+        }
+        Player player = event.getPlayer();
+        event.getReplacedBlockStates().forEach(state -> blockTags.setOwner(state.getBlock(), player.getUniqueId()));
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        blockTags.clearTags(event.getBlock());
+    }
+
+    @EventHandler
     public void onBlockFertilize(BlockFertilizeEvent event) {
         if (!settings.blockGrowthTagging()) {
             return;
@@ -108,6 +131,64 @@ public class BlockTagListener implements Listener {
                 playerDataManager.get(ownerId).increment(PlayerData.CounterType.BLOCK_TRANSFORM_TAGS);
             }
         });
+        if (event.getTo().isAir()) {
+            blockTags.clearTags(event.getBlock());
+        }
+    }
+
+    @EventHandler
+    public void onBlockPistonExtend(BlockPistonExtendEvent event) {
+        int dx = event.getDirection().getModX();
+        int dy = event.getDirection().getModY();
+        int dz = event.getDirection().getModZ();
+        event.getBlocks().stream()
+                .sorted((a, b) -> Integer.compare(
+                        (b.getX() * dx) + (b.getY() * dy) + (b.getZ() * dz),
+                        (a.getX() * dx) + (a.getY() * dy) + (a.getZ() * dz)))
+                .forEach(source -> moveTags(source, source.getRelative(event.getDirection())));
+    }
+
+    @EventHandler
+    public void onBlockPistonRetract(BlockPistonRetractEvent event) {
+        event.getBlocks().forEach(source -> moveTags(source, source.getRelative(event.getDirection().getOppositeFace())));
+    }
+
+    @EventHandler
+    public void onEntityExplode(EntityExplodeEvent event) {
+        event.blockList().forEach(blockTags::clearTags);
+    }
+
+    @EventHandler
+    public void onBlockExplode(BlockExplodeEvent event) {
+        event.blockList().forEach(blockTags::clearTags);
+    }
+
+    @EventHandler
+    public void onBlockBurn(BlockBurnEvent event) {
+        blockTags.clearTags(event.getBlock());
+    }
+
+    @EventHandler
+    public void onBlockFade(BlockFadeEvent event) {
+        if (event.getNewState().getType().isAir()) {
+            blockTags.clearTags(event.getBlock());
+        }
+    }
+
+    @EventHandler
+    public void onLeavesDecay(LeavesDecayEvent event) {
+        blockTags.clearTags(event.getBlock());
+    }
+
+    private void moveTags(Block source, Block destination) {
+        Optional<UUID> owner = blockTags.getOwner(source);
+        Optional<UUID> grownFromPlayer = blockTags.getGrownFromPlayer(source);
+        Optional<UUID> transformedFromPlayer = blockTags.getTransformedFromPlayer(source);
+
+        blockTags.clearTags(source);
+        owner.ifPresent(id -> blockTags.setOwner(destination, id));
+        grownFromPlayer.ifPresent(id -> blockTags.setGrownFromPlayer(destination, id));
+        transformedFromPlayer.ifPresent(id -> blockTags.setTransformedFromPlayer(destination, id));
     }
 
     private void handleBlockGrowth(Block sourceBlock, Collection<BlockState> grownStates) {

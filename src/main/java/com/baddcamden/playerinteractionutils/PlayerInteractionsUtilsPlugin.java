@@ -44,9 +44,7 @@ public class PlayerInteractionsUtilsPlugin extends JavaPlugin {
         if (!settings.entityPdcEnabled()) {
             entityDataManager.saveAllTracked();
         }
-        if (!settings.chunkPdcEnabled()) {
-            blockDataManager.saveAllTracked();
-        }
+        blockDataManager.saveAllTracked();
     }
 
     private void registerListeners() {
@@ -58,9 +56,7 @@ public class PlayerInteractionsUtilsPlugin extends JavaPlugin {
         if (!settings.entityPdcEnabled()) {
             pluginManager.registerEvents(new NonPlayerEntityLifecycleListener(entityDataManager, false), this);
         }
-        if (!settings.chunkPdcEnabled()) {
-            pluginManager.registerEvents(new ChunkLifecycleListener(blockDataManager, false), this);
-        }
+        pluginManager.registerEvents(new ChunkLifecycleListener(blockDataManager, false), this);
     }
 
     public void reloadConfiguration() {
